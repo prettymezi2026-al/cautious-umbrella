@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>집현전 맞춤법 대결 - 세종대왕의 학사가 되다!</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📜</text></svg>" />
+    
+    <!-- Google Fonts: Gowun Batang, Noto Serif KR, Nanum Gothic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nanum+Gothic:wght@400;700;800&family=Noto+Serif+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              joseon: {
+                bg: '#fbf7ee',
+                paper: '#f5edd6',
+                hanji: '#ede1c9',
+                primary: '#8b261b',
+                accent: '#d99b26',
+                gold: '#f3b61f',
+                dark: '#2c221e',
+                blue: '#1b4965',
+                green: '#2d6a4f',
+                wood: '#5c3d2e',
+              }
+            },
+            fontFamily: {
+              sans: ['Gowun Batang', 'Noto Serif KR', 'Nanum Gothic', 'serif', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    
+    <!-- Custom CSS Styles -->
+    <style>
+      body {
+        background-color: #fbf7ee;
+        background-image: radial-gradient(#e5d9c2 1px, transparent 1px);
+        background-size: 24px 24px;
+        font-family: 'Gowun Batang', 'Noto Serif KR', serif;
+        color: #2c221e;
+      }
+      .hanji-card {
+        background: rgba(245, 237, 214, 0.92);
+        backdrop-filter: blur(8px);
+        border: 2px solid #d4c29d;
+        box-shadow: 0 8px 24px -4px rgba(44, 34, 30, 0.12), inset 0 0 12px rgba(255, 255, 255, 0.6);
+        border-radius: 1rem;
+      }
+      .scroll-panel {
+        background: linear-gradient(180deg, #f7efe0 0%, #eddcc3 100%);
+        border: 3px solid #8b261b;
+        box-shadow: 0 10px 30px rgba(139, 38, 27, 0.15);
+      }
+      .gold-badge {
+        background: linear-gradient(135deg, #ffe066 0%, #f3b61f 50%, #d99b26 100%);
+        color: #3a2200;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+        box-shadow: 0 4px 12px rgba(243, 182, 31, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+      }
+      .btn-joseon-primary {
+        background: linear-gradient(180deg, #a32e22 0%, #8b261b 100%);
+        color: #fff;
+        border: 2px solid #5c160e;
+        box-shadow: 0 4px 12px rgba(139, 38, 27, 0.3);
+        transition: all 0.15s ease-in-out;
+      }
+      .btn-joseon-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(139, 38, 27, 0.4);
+        background: linear-gradient(180deg, #b83628 0%, #9c2d20 100%);
+      }
+      .btn-joseon-gold {
+        background: linear-gradient(180deg, #f7c73a 0%, #e09f19 100%);
+        color: #2c1a00;
+        border: 2px solid #b37b0d;
+        box-shadow: 0 4px 12px rgba(224, 159, 25, 0.35);
+        font-weight: 700;
+        transition: all 0.15s ease-in-out;
+      }
+      .btn-joseon-gold:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(224, 159, 25, 0.5);
+      }
+    </style>
+
+    <!-- React 18, ReactDOM 18, Babel Standalone & Canvas Confetti -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Main React Bundle Script -->
+    <script type="text/babel" src="/app.jsx"></script>
+  </body>
+</html>

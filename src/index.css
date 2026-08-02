@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #fbf7ee;
+    background-image: radial-gradient(#e5d9c2 1px, transparent 1px);
+    background-size: 24px 24px;
+    font-family: 'Gowun Batang', 'Noto Serif KR', serif;
+    color: #2c221e;
+  }
+}
+
+/* Custom Joseon Style Utilities */
+.hanji-card {
+  background: rgba(245, 237, 214, 0.9);
+  backdrop-filter: blur(8px);
+  border: 2px solid #d4c29d;
+  box-shadow: 0 8px 24px -4px rgba(44, 34, 30, 0.12), inset 0 0 12px rgba(255, 255, 255, 0.6);
+  border-radius: 1rem;
+}
+
+.scroll-panel {
+  background: linear-gradient(180deg, #f7efe0 0%, #eddcc3 100%);
+  border: 3px solid #8b261b;
+  box-shadow: 0 10px 30px rgba(139, 38, 27, 0.15);
+  position: relative;
+}
+
+.gold-badge {
+  background: linear-gradient(135deg, #ffe066 0%, #f3b61f 50%, #d99b26 100%);
+  color: #3a2200;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 12px rgba(243, 182, 31, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+}
+
+.btn-joseon-primary {
+  background: linear-gradient(180deg, #a32e22 0%, #8b261b 100%);
+  color: #fff;
+  border: 2px solid #5c160e;
+  box-shadow: 0 4px 12px rgba(139, 38, 27, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-joseon-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 38, 27, 0.4);
+  background: linear-gradient(180deg, #b83628 0%, #9c2d20 100%);
+}
+
+.btn-joseon-gold {
+  background: linear-gradient(180deg, #f7c73a 0%, #e09f19 100%);
+  color: #2c1a00;
+  border: 2px solid #b37b0d;
+  box-shadow: 0 4px 12px rgba(224, 159, 25, 0.35);
+  font-weight: 700;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-joseon-gold:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(224, 159, 25, 0.5);
+}
+
+/* Shimmer Keyframe */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-effect::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 2.5s infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1e7d0;
+}
+::-webkit-scrollbar-thumb {
+  background: #c7b38d;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8b261b;
+}
