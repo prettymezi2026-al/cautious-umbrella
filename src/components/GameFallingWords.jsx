@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, Home, RotateCcw, ArrowLeft, ArrowRight, Coins, ShieldAlert, Sparkles } from 'lucide-react';
+import { Heart, Home, RotateCcw, Coins, Sparkles, Send, Keyboard, CheckCircle2, XCircle } from 'lucide-react';
 import { sounds } from '../utils/audio';
 
 export default function GameFallingWords({ user, quizData, onFinish, onGoHome }) {
@@ -7,132 +7,91 @@ export default function GameFallingWords({ user, quizData, onFinish, onGoHome })
   const [score, setScore] = useState(0);
   const [survivalTime, setSurvivalTime] = useState(0);
   const [totalGold, setTotalGold] = useState(0);
-  const [basketPos, setBasketPos] = useState(50); // percentage (0 to 100)
+  const [inputValue, setInputValue] = useState('');
   const [fallingWords, setFallingWords] = useState([]);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [feedbackEffect, setFeedbackEffect] = useState(null); // 'correct' | 'wrong'
+  const [feedbackEffect, setFeedbackEffect] = useState(null);
 
   const requestRef = useRef();
   const lastSpawnTime = useRef(Date.now());
-  const speedRef = useRef(1.2); // Base speed
-  const basketPosRef = useRef(50);
+  const speedRef = useRef(0.25); // Gentle, comfortable falling speed!
   const livesRef = useRef(3);
   const scoreRef = useRef(0);
-
-  // Sync ref
-  useEffect(() => {
-    basketPosRef.current = basketPos;
-  }, [basketPos]);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     livesRef.current = lives;
   }, [lives]);
 
-  // Keyboard controls
+  // Focus input automatically
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (isGameOver) return;
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        setBasketPos((prev) => Math.max(5, prev - 8));
-      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        setBasketPos((prev) => Math.min(95, prev + 8));
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   }, [isGameOver]);
 
   // Game Loop
   useEffect(() => {
     if (isGameOver || !quizData || !quizData.questions) return;
 
-    // Generate word pool of correct & incorrect words
+    // Prepare pool of words with correct & wrong spelling options
     const wordPool = [];
     quizData.questions.forEach((q) => {
-      wordPool.push({ text: q.answer, isCorrect: true, tip: q.tip });
-      q.options.forEach((opt) => {
-        if (opt !== q.answer) {
-          wordPool.push({ text: opt, isCorrect: false, tip: q.tip });
-        }
+      wordPool.push({
+        displayedText: q.sentence.replace('{blank}', `[ ${q.options.join('/')} ]`),
+        correctAnswer: q.answer,
+        options: q.options,
+        tip: q.tip
       });
     });
 
     const timerInterval = setInterval(() => {
       setSurvivalTime((prev) => prev + 1);
-      // Gradually increase falling speed over time
-      speedRef.current += 0.05;
     }, 1000);
 
     const updateLoop = () => {
       const now = Date.now();
 
-      // Spawn new falling word every 1.8s ~ 2.5s
-      if (now - lastSpawnTime.current > Math.max(900, 2200 - speedRef.current * 150)) {
+      // Spawn falling word cloud every 3.5 seconds (gentle pace)
+      if (now - lastSpawnTime.current > 3500) {
         lastSpawnTime.current = now;
-        const randomWord = wordPool[Math.floor(Math.random() * wordPool.length)];
+        const randomItem = wordPool[Math.floor(Math.random() * wordPool.length)];
         
         setFallingWords((prev) => [
           ...prev,
           {
             id: 'w_' + Date.now() + '_' + Math.random(),
-            text: randomWord.text,
-            isCorrect: randomWord.isCorrect,
-            x: 10 + Math.random() * 80, // percentage 10% to 90%
+            sentence: randomItem.displayedText,
+            correctAnswer: randomItem.correctAnswer,
+            options: randomItem.options,
+            tip: randomItem.tip,
+            x: 10 + Math.random() * 70, // percentage 10% ~ 80%
             y: 0,
-            speed: (0.6 + Math.random() * 0.4) * speedRef.current
+            speed: speedRef.current
           }
         ]);
       }
 
-      // Move falling words down & collision check
+      // Move words down & check ground collision
       setFallingWords((prev) => {
         const nextWords = [];
 
         for (let word of prev) {
           const newY = word.y + word.speed;
 
-          // Catch check near bottom (y >= 82% and y <= 92%)
-          if (newY >= 82 && newY <= 92) {
-            const distance = Math.abs(word.x - basketPosRef.current);
-            if (distance < 12) {
-              // CAUGHT BY BASKET!
-              if (word.isCorrect) {
-                sounds.playCorrect();
-                scoreRef.current += 1;
-                setScore(scoreRef.current);
-                setFeedbackEffect('correct');
-                setTimeout(() => setFeedbackEffect(null), 300);
-              } else {
-                sounds.playWrong();
-                livesRef.current -= 1;
-                setLives(livesRef.current);
-                setFeedbackEffect('wrong');
-                setTimeout(() => setFeedbackEffect(null), 300);
-                if (livesRef.current <= 0) {
-                  endGame();
-                  return [];
-                }
-              }
-              continue; // remove caught word
-            }
-          }
+          // Hit ground (y >= 88%) -> Missed!
+          if (newY >= 88) {
+            sounds.playWrong();
+            livesRef.current -= 1;
+            setLives(livesRef.current);
+            setFeedbackEffect({ type: 'wrong', msg: `시간 초과! 올바른 표기는 '${word.correctAnswer}'` });
+            setTimeout(() => setFeedbackEffect(null), 1200);
 
-          // Missed word check (reached bottom y > 95%)
-          if (newY > 95) {
-            if (word.isCorrect) {
-              // Missed a CORRECT word -> lose life!
-              sounds.playWrong();
-              livesRef.current -= 1;
-              setLives(livesRef.current);
-              setFeedbackEffect('wrong');
-              setTimeout(() => setFeedbackEffect(null), 300);
-              if (livesRef.current <= 0) {
-                endGame();
-                return [];
-              }
+            if (livesRef.current <= 0) {
+              endGame();
+              return [];
             }
-            continue; // remove word
+            continue; // Remove word
           }
 
           nextWords.push({ ...word, y: newY });
@@ -154,12 +113,53 @@ export default function GameFallingWords({ user, quizData, onFinish, onGoHome })
     };
   }, [quizData, isGameOver]);
 
+  // Submit Answer
+  const handleCheckAnswer = (answerText) => {
+    if (isGameOver || !answerText || fallingWords.length === 0) return;
+
+    const targetAnswer = answerText.trim();
+    // Match against lowest falling word matching the correct answer
+    const matchIndex = fallingWords.findIndex(
+      (w) => w.correctAnswer.toLowerCase() === targetAnswer.toLowerCase()
+    );
+
+    if (matchIndex !== -1) {
+      // CORRECT!
+      sounds.playCorrect();
+      scoreRef.current += 1;
+      setScore(scoreRef.current);
+      setTotalGold((prev) => prev + 10);
+      setFeedbackEffect({ type: 'correct', msg: `정답! (+10 G)` });
+      setTimeout(() => setFeedbackEffect(null), 800);
+
+      // Remove popped word
+      setFallingWords((prev) => prev.filter((_, idx) => idx !== matchIndex));
+      setInputValue('');
+    } else {
+      // WRONG ANSWER INPUT!
+      sounds.playWrong();
+      livesRef.current -= 1;
+      setLives(livesRef.current);
+      setFeedbackEffect({ type: 'wrong', msg: `오답입니다! (틀린 입력: ${targetAnswer})` });
+      setTimeout(() => setFeedbackEffect(null), 1200);
+      setInputValue('');
+
+      if (livesRef.current <= 0) {
+        endGame();
+      }
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleCheckAnswer(inputValue);
+  };
+
   const endGame = async () => {
     setIsGameOver(true);
     sounds.playFanfare();
 
-    // Calculate total gold (Score * 8 + Survival seconds * 1)
-    const earnedGold = (scoreRef.current * 8) + Math.floor(survivalTime / 2);
+    const earnedGold = (scoreRef.current * 10) + Math.floor(survivalTime / 3);
     setTotalGold(earnedGold);
 
     try {
@@ -204,7 +204,7 @@ export default function GameFallingWords({ user, quizData, onFinish, onGoHome })
           </div>
 
           <div className="text-sm font-black text-[#2d6a4f]">
-            잡은 단어: {score}개 ({survivalTime}초 생존)
+            정답 수: {score}개 ({survivalTime}초)
           </div>
         </div>
       </div>
@@ -212,87 +212,100 @@ export default function GameFallingWords({ user, quizData, onFinish, onGoHome })
       {!isGameOver ? (
         <div className="space-y-4">
           
-          {/* Main Game Screen Board */}
-          <div className={`relative w-full h-[450px] bg-gradient-to-b from-[#fbf7ee] to-[#ede1c9] rounded-2xl border-4 overflow-hidden shadow-2xl transition-colors ${
-            feedbackEffect === 'wrong' ? 'border-red-500 bg-rose-100/50' : 
-            feedbackEffect === 'correct' ? 'border-emerald-500 bg-emerald-100/30' : 'border-[#2d6a4f]'
+          {/* Main Falling Screen */}
+          <div className={`relative w-full h-[400px] bg-gradient-to-b from-[#fbf7ee] via-[#ede1c9] to-[#d4c29d] rounded-2xl border-4 overflow-hidden shadow-2xl transition-colors ${
+            feedbackEffect?.type === 'wrong' ? 'border-red-500 bg-rose-100/50' : 
+            feedbackEffect?.type === 'correct' ? 'border-emerald-500 bg-emerald-100/30' : 'border-[#2d6a4f]'
           }`}>
             
-            {/* Falling Words */}
+            {/* Ground Line Danger Zone */}
+            <div className="absolute bottom-0 left-0 right-0 h-10 bg-red-900/10 border-t-2 border-red-500/40 flex items-center justify-center text-xs font-bold text-red-700/80">
+              ⚠️ 바닥에 닿기 전에 올바른 맞춤법을 입력하세요!
+            </div>
+
+            {/* Falling Word Clouds */}
             {fallingWords.map((word) => (
               <div
                 key={word.id}
-                className="absolute transform -translate-x-1/2 px-4 py-2 bg-[#f5edd6] text-[#2c221e] font-extrabold text-lg sm:text-xl rounded-xl border-2 border-[#8b261b] shadow-md pointer-events-none select-none transition-transform"
+                className="absolute transform -translate-x-1/2 px-4 py-2.5 bg-[#fbf7ee] text-[#2c221e] font-extrabold text-base sm:text-lg rounded-2xl border-2 border-[#8b261b] shadow-lg animate-float"
                 style={{
                   left: `${word.x}%`,
                   top: `${word.y}%`
                 }}
               >
-                {word.text}
+                <div className="flex flex-col items-center">
+                  <span className="text-[#8b261b]">{word.sentence}</span>
+                  <div className="flex gap-1.5 mt-1">
+                    {word.options.map((opt, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleCheckAnswer(opt)}
+                        className="px-2.5 py-0.5 bg-[#ede1c9] hover:bg-amber-200 text-[#8b261b] text-xs font-black rounded-lg border border-[#bfa980] shadow-sm"
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             ))}
 
-            {/* Scholar Basket Character at Bottom */}
-            <div
-              className="absolute bottom-3 transform -translate-x-1/2 flex flex-col items-center transition-all duration-75"
-              style={{ left: `${basketPos}%` }}
-            >
-              {/* Basket Icon */}
-              <div className="w-20 h-10 bg-gradient-to-r from-amber-600 to-amber-700 rounded-t-2xl border-2 border-amber-900 shadow-xl flex items-center justify-center text-[#fbf7ee] text-xs font-bold">
-                🧺 올바른 한글
+            {/* Feedback Floating Banner */}
+            {feedbackEffect && (
+              <div className={`absolute top-4 left-1/2 transform -translate-x-1/2 px-6 py-2 rounded-full font-bold text-sm shadow-xl z-20 animate-bounce ${
+                feedbackEffect.type === 'correct' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+              }`}>
+                {feedbackEffect.msg}
               </div>
-              {/* Scholar Avatar */}
-              <div className="text-2xl -mt-1">
-                🧑‍🎓
-              </div>
-            </div>
-
-            {/* Game Instructions Overlay */}
-            <div className="absolute top-2 left-2 text-xs font-bold text-[#5c3d2e] bg-[#fbf7ee]/80 px-3 py-1 rounded-full border border-[#c7b38d]">
-              💡 <strong>올바른 맞춤법만</strong> 받아내세요!
-            </div>
+            )}
           </div>
 
-          {/* Mobile & Touch Controls */}
-          <div className="flex items-center justify-between gap-4">
+          {/* Typing & Option Controls Form */}
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="내려오는 단어의 올바른 맞춤법 입력 (예: 돼 / 오랜만 / 안)"
+                className="w-full px-4 py-3.5 bg-[#fbf7ee] border-2 border-[#c7b38d] rounded-xl text-[#2c221e] font-bold text-lg focus:outline-none focus:border-[#2d6a4f] shadow-inner"
+              />
+              <Keyboard className="absolute right-3.5 top-3.5 w-5 h-5 text-gray-400" />
+            </div>
+
             <button
-              onClick={() => setBasketPos((prev) => Math.max(5, prev - 12))}
-              className="flex-1 py-4 bg-[#2d6a4f] hover:bg-[#23533e] active:bg-[#1a3d2e] text-white rounded-xl font-extrabold text-lg flex items-center justify-center gap-2 shadow-lg"
+              type="submit"
+              className="px-6 py-3.5 bg-[#2d6a4f] hover:bg-[#23533e] text-white font-extrabold rounded-xl text-lg shadow-lg flex items-center gap-1.5"
             >
-              <ArrowLeft className="w-6 h-6" /> 왼쪽 이동
+              <Send className="w-5 h-5" /> 입력
             </button>
-            <button
-              onClick={() => setBasketPos((prev) => Math.min(95, prev + 12))}
-              className="flex-1 py-4 bg-[#2d6a4f] hover:bg-[#23533e] active:bg-[#1a3d2e] text-white rounded-xl font-extrabold text-lg flex items-center justify-center gap-2 shadow-lg"
-            >
-              오른쪽 이동 <ArrowRight className="w-6 h-6" />
-            </button>
-          </div>
+          </form>
 
         </div>
       ) : (
         /* GAME OVER SUMMARY */
         <div className="scroll-panel p-8 rounded-2xl shadow-2xl text-center space-y-6 animate-scale-up">
           <div className="w-20 h-20 rounded-full bg-[#2d6a4f] text-amber-300 flex items-center justify-center text-4xl mx-auto shadow-lg border-2 border-amber-400">
-            🧺
+            ✍️
           </div>
 
           <div>
             <h3 className="text-2xl sm:text-3xl font-black text-[#2d6a4f]">
-              낙하 단어 잡기 종료!
+              맞춤법 낙하 잡기 종료!
             </h3>
             <p className="text-sm text-[#5c3d2e] mt-1 font-semibold">
-              {user.nickname} 학사님의 순발력이 빛났습니다!
+              3번의 틀린 입력으로 게임이 종료되었습니다.
             </p>
           </div>
 
           <div className="grid grid-cols-3 gap-3 bg-[#ede1c9] p-4 rounded-xl border border-[#d4c29d]">
             <div>
-              <p className="text-xs text-[#5c3d2e]">잡은 단어 수</p>
+              <p className="text-xs text-[#5c3d2e]">맞힌 수</p>
               <p className="text-xl font-extrabold text-[#2d6a4f]">{score}개</p>
             </div>
             <div>
-              <p className="text-xs text-[#5c3d2e]">생존 시간</p>
+              <p className="text-xs text-[#5c3d2e]">버틴 시간</p>
               <p className="text-xl font-extrabold text-[#1b4965]">{survivalTime}초</p>
             </div>
             <div>
@@ -308,9 +321,8 @@ export default function GameFallingWords({ user, quizData, onFinish, onGoHome })
                 setScore(0);
                 setSurvivalTime(0);
                 setTotalGold(0);
-                setBasketPos(50);
                 setFallingWords([]);
-                speedRef.current = 1.2;
+                setInputValue('');
                 scoreRef.current = 0;
                 livesRef.current = 3;
                 setIsGameOver(false);
