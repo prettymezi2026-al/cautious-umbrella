@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Use /tmp on Vercel serverless environment to allow file writes, or local path
 const DB_FILE = process.env.VERCEL ? path.join('/tmp', 'database.json') : path.join(__dirname, 'data', 'database.json');
 
 const INITIAL_DATA = {
@@ -58,25 +57,23 @@ const INITIAL_DATA = {
   game_records: []
 };
 
-// In-memory cache for fast serverless responses
-let memoryCache = null;
+// In-memory cache to guarantee zero-crash execution
+let memoryCache = { ...INITIAL_DATA, users: [...INITIAL_DATA.users] };
 
 function readDB() {
-  if (memoryCache) return memoryCache;
+  if (memoryCache && memoryCache.users) return memoryCache;
   try {
-    if (!fs.existsSync(DB_FILE)) {
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, 'utf-8');
+      memoryCache = JSON.parse(raw);
+    } else {
       writeDB(INITIAL_DATA);
-      memoryCache = INITIAL_DATA;
-      return INITIAL_DATA;
     }
-    const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    memoryCache = JSON.parse(raw);
-    return memoryCache;
   } catch (err) {
-    console.error("DB Read Error:", err);
-    memoryCache = INITIAL_DATA;
-    return INITIAL_DATA;
+    console.error("DB Read Warning (using memory fallback):", err);
+    memoryCache = { ...INITIAL_DATA, users: [...INITIAL_DATA.users] };
   }
+  return memoryCache;
 }
 
 function writeDB(data) {
@@ -88,7 +85,7 @@ function writeDB(data) {
     }
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    console.error("DB Write Error:", err);
+    console.error("DB Write Warning (memory persisted):", err);
   }
 }
 
@@ -96,7 +93,7 @@ export const db = {
   loginOrRegister(nickname) {
     const data = readDB();
     const cleanNick = nickname.trim();
-    let user = data.users.find(u => u.nickname.toLowerCase() === cleanNick.toLowerCase());
+    let user = data.users.find(u => u.nickname && u.nickname.toLowerCase() === cleanNick.toLowerCase());
 
     if (!user) {
       user = {
@@ -118,13 +115,13 @@ export const db = {
 
   getUser(nickname) {
     const data = readDB();
-    return data.users.find(u => u.nickname.toLowerCase() === nickname.trim().toLowerCase()) || null;
+    return data.users.find(u => u.nickname && u.nickname.toLowerCase() === nickname.trim().toLowerCase()) || null;
   },
 
   addGoldAndPlay(nickname, goldEarned, gameType) {
     const data = readDB();
     const cleanNick = nickname.trim();
-    const user = data.users.find(u => u.nickname.toLowerCase() === cleanNick.toLowerCase());
+    const user = data.users.find(u => u.nickname && u.nickname.toLowerCase() === cleanNick.toLowerCase());
     
     if (!user) return null;
 
@@ -148,7 +145,7 @@ export const db = {
   saveBossResult(nickname, score, timeSeconds, goldDeduction = 100) {
     const data = readDB();
     const cleanNick = nickname.trim();
-    const user = data.users.find(u => u.nickname.toLowerCase() === cleanNick.toLowerCase());
+    const user = data.users.find(u => u.nickname && u.nickname.toLowerCase() === cleanNick.toLowerCase());
 
     if (!user) return null;
 
