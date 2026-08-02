@@ -4,14 +4,10 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'data', 'database.json');
 
-// Ensure directory exists
-if (!fs.existsSync(path.dirname(DB_FILE))) {
-  fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-}
+// Use /tmp on Vercel serverless environment to allow file writes, or local path
+const DB_FILE = process.env.VERCEL ? path.join('/tmp', 'database.json') : path.join(__dirname, 'data', 'database.json');
 
-// Initial DB state with sample seed users for realistic rankings
 const INITIAL_DATA = {
   users: [
     {
@@ -62,24 +58,34 @@ const INITIAL_DATA = {
   game_records: []
 };
 
-// Read database
+// In-memory cache for fast serverless responses
+let memoryCache = null;
+
 function readDB() {
+  if (memoryCache) return memoryCache;
   try {
     if (!fs.existsSync(DB_FILE)) {
       writeDB(INITIAL_DATA);
+      memoryCache = INITIAL_DATA;
       return INITIAL_DATA;
     }
     const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(raw);
+    memoryCache = JSON.parse(raw);
+    return memoryCache;
   } catch (err) {
     console.error("DB Read Error:", err);
+    memoryCache = INITIAL_DATA;
     return INITIAL_DATA;
   }
 }
 
-// Write database atomically
 function writeDB(data) {
+  memoryCache = data;
   try {
+    const dir = path.dirname(DB_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
     console.error("DB Write Error:", err);
@@ -87,7 +93,6 @@ function writeDB(data) {
 }
 
 export const db = {
-  // Get or login user by nickname
   loginOrRegister(nickname) {
     const data = readDB();
     const cleanNick = nickname.trim();
@@ -111,13 +116,11 @@ export const db = {
     return user;
   },
 
-  // Get user profile
   getUser(nickname) {
     const data = readDB();
     return data.users.find(u => u.nickname.toLowerCase() === nickname.trim().toLowerCase()) || null;
   },
 
-  // Update user gold & play count
   addGoldAndPlay(nickname, goldEarned, gameType) {
     const data = readDB();
     const cleanNick = nickname.trim();
@@ -129,7 +132,6 @@ export const db = {
     user.total_play_count += 1;
     user.updated_at = new Date().toISOString();
 
-    // Log record
     data.game_records.push({
       id: 'rec_' + Date.now(),
       user_id: user.id,
@@ -143,7 +145,6 @@ export const db = {
     return user;
   },
 
-  // Record boss duel result
   saveBossResult(nickname, score, timeSeconds, goldDeduction = 100) {
     const data = readDB();
     const cleanNick = nickname.trim();
@@ -151,12 +152,10 @@ export const db = {
 
     if (!user) return null;
 
-    // Deduct entry gold if provided
     user.gold = Math.max(0, user.gold - goldDeduction);
     user.boss_play_count += 1;
     user.total_play_count += 1;
 
-    // Update high score & fastest time (if equal score, faster time wins)
     if (score > user.boss_high_score || (score === user.boss_high_score && timeSeconds < user.boss_fastest_time)) {
       user.boss_high_score = score;
       user.boss_fastest_time = timeSeconds;
@@ -178,20 +177,18 @@ export const db = {
     return user;
   },
 
-  // Tab A Ranking: Boss score DESC, fastest time ASC
   getBossRankings(limit = 20) {
     const data = readDB();
     const filtered = data.users.filter(u => u.boss_high_score > 0);
     filtered.sort((a, b) => {
       if (b.boss_high_score !== a.boss_high_score) {
-        return b.boss_high_score - a.boss_high_score; // Higher score first
+        return b.boss_high_score - a.boss_high_score;
       }
-      return a.boss_fastest_time - b.boss_fastest_time; // Lower time first
+      return a.boss_fastest_time - b.boss_fastest_time;
     });
     return filtered.slice(0, limit);
   },
 
-  // Tab B Ranking: Total play count DESC
   getPlayRankings(limit = 20) {
     const data = readDB();
     const sorted = [...data.users];
